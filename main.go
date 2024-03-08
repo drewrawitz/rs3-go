@@ -33,6 +33,14 @@ type HatchetProperties struct {
 
 var dbClient *mongo.Client
 
+func unmarshalProperties(props bson.M, target interface{}) error {
+	b, err := bson.Marshal(props)
+	if err != nil {
+		return err
+	}
+	return bson.Unmarshal(b, target)
+}
+
 func getItemByName(itemName string) (*Item, error) {
 	col := dbClient.Database("rs3").Collection("items")
 
@@ -53,22 +61,12 @@ func getItemByName(itemName string) (*Item, error) {
 
 	switch item.Type {
 	case "pickaxe":
-		var pickaxeProps PickaxeProperties
-		// Directly set fields using properties map
-		if penetration, ok := properties["penetration"].(int32); ok {
-			pickaxeProps.Penetration = int32(penetration)
+		pickaxeProps := &PickaxeProperties{}
+		if err := unmarshalProperties(properties, pickaxeProps); err != nil {
+			return nil, err
 		}
-		if minLevel, ok := properties["minLevel"].(int32); ok {
-			pickaxeProps.MinLevel = int32(minLevel)
-		}
-		if minDamage, ok := properties["minDamage"].(int32); ok {
-			pickaxeProps.MinDamage = int32(minDamage)
-		}
-		if maxDamage, ok := properties["maxDamage"].(int32); ok {
-			pickaxeProps.MaxDamage = int32(maxDamage)
-		}
-
 		item.Properties = pickaxeProps
+
 	default:
 		return nil, fmt.Errorf("unknown item type: %s", item.Type)
 	}
@@ -105,15 +103,14 @@ func main() {
 		}
 	}()
 
-	item, err := getItemByName("Bronze Pickaxe")
+	item, err := getItemByName("Bronze Pickaxe2")
 
 	if err != nil {
 		log.Fatalf("Error getting item: %v", err)
 	}
 
-	// Assuming the assertion is to PickaxeProperties
-	if pickaxeProps, ok := item.Properties.(PickaxeProperties); ok {
-		fmt.Printf("Successfully retrieved and asserted pickaxe properties: %+v\n", pickaxeProps.MaxDamage)
+	if pickaxeProps, ok := item.Properties.(*PickaxeProperties); ok {
+		fmt.Printf("Successfully retrieved and asserted pickaxe properties: %+v\n", pickaxeProps.MinDamage)
 	} else {
 		log.Fatalf("Failed to assert pickaxe properties")
 	}
