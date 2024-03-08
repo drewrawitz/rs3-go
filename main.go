@@ -41,6 +41,8 @@ func getItemByName(itemName string) (*Item, error) {
 		return nil, err
 	}
 
+	properties := rawItem["properties"].(bson.M)
+
 	item := &Item{
 		Name:        rawItem["name"].(string),
 		Value:       rawItem["value"].(int32),
@@ -49,32 +51,24 @@ func getItemByName(itemName string) (*Item, error) {
 		Type:        rawItem["type"].(string),
 	}
 
-	// Handle properties based on type
 	switch item.Type {
 	case "pickaxe":
-		props, ok := rawItem["properties"].(bson.M)
-		if !ok {
-			return nil, fmt.Errorf("failed to assert properties for pickaxe")
+		var pickaxeProps PickaxeProperties
+		// Directly set fields using properties map
+		if penetration, ok := properties["penetration"].(int32); ok {
+			pickaxeProps.Penetration = int32(penetration)
 		}
-		pickaxeProps := PickaxeProperties{}
-		if b, err := bson.Marshal(props); err == nil {
-			if err := bson.Unmarshal(b, &pickaxeProps); err != nil {
-				return nil, err
-			}
+		if minLevel, ok := properties["minLevel"].(int32); ok {
+			pickaxeProps.MinLevel = int32(minLevel)
 		}
+		if minDamage, ok := properties["minDamage"].(int32); ok {
+			pickaxeProps.MinDamage = int32(minDamage)
+		}
+		if maxDamage, ok := properties["maxDamage"].(int32); ok {
+			pickaxeProps.MaxDamage = int32(maxDamage)
+		}
+
 		item.Properties = pickaxeProps
-	case "hatchet":
-		props, ok := rawItem["properties"].(bson.M)
-		if !ok {
-			return nil, fmt.Errorf("failed to assert properties for hatchet")
-		}
-		hatchetProps := HatchetProperties{}
-		if b, err := bson.Marshal(props); err == nil {
-			if err := bson.Unmarshal(b, &hatchetProps); err != nil {
-				return nil, err
-			}
-		}
-		item.Properties = hatchetProps
 	default:
 		return nil, fmt.Errorf("unknown item type: %s", item.Type)
 	}
@@ -111,11 +105,17 @@ func main() {
 		}
 	}()
 
-	itemName := "Bronze Pickaxe"
-	item, err := getItemByName(itemName)
+	item, err := getItemByName("Bronze Pickaxe")
+
 	if err != nil {
 		log.Fatalf("Error getting item: %v", err)
 	}
 
-	log.Printf("Got item: %+v\n", item)
+	// Assuming the assertion is to PickaxeProperties
+	if pickaxeProps, ok := item.Properties.(PickaxeProperties); ok {
+		fmt.Printf("Successfully retrieved and asserted pickaxe properties: %+v\n", pickaxeProps.MaxDamage)
+	} else {
+		log.Fatalf("Failed to assert pickaxe properties")
+	}
+
 }
