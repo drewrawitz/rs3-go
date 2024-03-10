@@ -9,42 +9,32 @@ import (
 	"rs3/internal/model"
 )
 
-func unmarshalProperties(props bson.M, target interface{}) error {
-	b, err := bson.Marshal(props)
-	if err != nil {
-		return err
-	}
-	return bson.Unmarshal(b, target)
-}
-
-// getItemByName fetches an item by its name from the MongoDB database.
-func GetItemByName(client *mongo.Client, itemName string) (*model.Item, error) {
+func GetItemById(ctx context.Context, client *mongo.Client, itemId string) (*model.Item, error) {
 	col := client.Database("rs3").Collection("items")
 
-	var rawItem bson.M
-	if err := col.FindOne(context.Background(), bson.M{"name": itemName}).Decode(&rawItem); err != nil {
+	var item model.Item
+	if err := col.FindOne(ctx, bson.M{"_id": itemId}).Decode(&item); err != nil {
 		return nil, err
 	}
 
-	item := &model.Item{
-		Name:        rawItem["name"].(string),
-		Value:       rawItem["value"].(int32),
-		Equipable:   rawItem["equipable"].(bool),
-		Description: rawItem["description"].(string),
-		Type:        rawItem["type"].(string),
-	}
-
-	// Handle properties based on item.Type
 	switch item.Type {
 	case "pickaxe":
-		pickaxeProps := &PickaxeProperties{}
-		if err := unmarshalProperties(rawItem["properties"].(bson.M), pickaxeProps); err != nil {
-			return nil, err
+
+		propertiesBSON, err := bson.Marshal(item.Properties)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal properties: %w", err)
 		}
+
+		var pickaxeProps PickaxeProperties
+		if err := bson.Unmarshal(propertiesBSON, &pickaxeProps); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal pickaxe properties: %w", err)
+		}
+
 		item.Properties = pickaxeProps
+
 	default:
 		return nil, fmt.Errorf("unknown item type: %s", item.Type)
 	}
 
-	return item, nil
+	return &item, nil
 }
