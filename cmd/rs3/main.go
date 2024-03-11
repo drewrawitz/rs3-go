@@ -81,32 +81,6 @@ func main() {
 
 				miningSession.Start() // Start the mining session
 
-				// rock.Mine(pickaxe, &playerContext, func(msg []byte) {
-				// 	if err := ws.WriteMessage(websocket.TextMessage, msg); err != nil {
-				// 		log.Println("Write error:", err)
-				// 	}
-				// })
-				//
-				// activeMiningSessions[userID] = true
-				// defer func() { delete(activeMiningSessions, userID) }()
-
-				// response := MiningResponse{
-				// 	Status:  "success",
-				// 	Message: "Mining started successfully",
-				// 	RockId:  req.RockId, // Assuming req is your parsed request struct
-				// }
-				//
-				// // Marshal the response struct to JSON
-				// jsonResponse, err := json.Marshal(response)
-				// if err != nil {
-				// 	log.Println("JSON marshal error:", err)
-				// 	continue
-				// }
-				//
-				// if err := ws.WriteMessage(websocket.TextMessage, jsonResponse); err != nil {
-				// 	log.Println("Write error:", err)
-				// 	break
-				// }
 			default:
 				log.Println("Unrecognizable action", req.Action)
 				continue
