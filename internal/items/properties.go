@@ -6,6 +6,7 @@ import (
 )
 
 // PickaxeProperties specific to pickaxes.
+
 type PickaxeProperties struct {
 	Penetration int32 `bson:"penetration" json:"penetration"`
 	MinLevel    int32 `bson:"minLevel" json:"minLevel"`

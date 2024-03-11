@@ -2,21 +2,19 @@ package model
 
 // Item represents a general game item.
 type Item struct {
-	Name        string      `bson:"name"`
-	Value       int32       `bson:"value"`
-	Equipable   bool        `bson:"equipable"`
-	Description string      `bson:"description"`
-	Type        string      `bson:"type"`
-	Properties  interface{} `bson:"properties"`
+	ID          string      `bson:"_id" json:"id"`
+	Name        string      `bson:"name" json:"name"`
+	Value       int         `bson:"value" json:"value"`
+	Equipable   bool        `bson:"equipable" json:"equipable"`
+	Description string      `bson:"description" json:"description"`
+	Type        string      `bson:"type" json:"type"`
+	Properties  interface{} `bson:"properties" json:"properties"`
 }
 
 type InventoryItem struct {
-	Item     *Item
-	Quantity int
-}
-
-type Inventory struct {
-	Items map[string]*InventoryItem
+	ItemID string `bson:"itemId" json:"itemId"`
+	Qty    int    `bson:"qty" json:"qty"`
+	Item   Item   `bson:"item" json:"item"`
 }
 
 type LootItem struct {
@@ -29,7 +27,8 @@ type LootItem struct {
 
 type DropTable []LootItem
 
-type PlayerContext struct {
-	Inventory *Inventory
-	SkillXP   map[string]int
+type Player struct {
+	ID        string          `bson:"_id" json:"id"`
+	Username  string          `bson:"username" json:"username"`
+	Inventory []InventoryItem `bson:"inventory" json:"inventory"`
 }

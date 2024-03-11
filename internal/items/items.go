@@ -9,6 +9,26 @@ import (
 	"rs3/internal/model"
 )
 
+func UnmarshalItemProperties(item *model.Item) error {
+	switch item.Type {
+	case "pickaxe":
+		var pickaxeProps PickaxeProperties
+		propertiesBSON, err := bson.Marshal(item.Properties)
+		if err != nil {
+			return fmt.Errorf("failed to marshal properties: %w", err)
+		}
+
+		if err := bson.Unmarshal(propertiesBSON, &pickaxeProps); err != nil {
+			return fmt.Errorf("failed to unmarshal pickaxe properties: %w", err)
+		}
+
+		item.Properties = pickaxeProps
+	default:
+		return fmt.Errorf("unknown item type: %s", item.Type)
+	}
+	return nil
+}
+
 func GetItemById(ctx context.Context, client *mongo.Client, itemId string) (*model.Item, error) {
 	col := client.Database("rs3").Collection("items")
 
@@ -17,23 +37,8 @@ func GetItemById(ctx context.Context, client *mongo.Client, itemId string) (*mod
 		return nil, err
 	}
 
-	switch item.Type {
-	case "pickaxe":
-
-		propertiesBSON, err := bson.Marshal(item.Properties)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal properties: %w", err)
-		}
-
-		var pickaxeProps PickaxeProperties
-		if err := bson.Unmarshal(propertiesBSON, &pickaxeProps); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal pickaxe properties: %w", err)
-		}
-
-		item.Properties = pickaxeProps
-
-	default:
-		return nil, fmt.Errorf("unknown item type: %s", item.Type)
+	if err := UnmarshalItemProperties(&item); err != nil {
+		return nil, err
 	}
 
 	return &item, nil

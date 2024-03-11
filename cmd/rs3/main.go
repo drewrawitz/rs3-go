@@ -2,18 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"rs3/internal/db"
-	"rs3/internal/items"
-	"rs3/internal/model"
-
-	// "rs3/internal/model"
+	"rs3/internal/players"
 	"rs3/internal/skills/mining"
-
-	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
-	// "go.mongodb.org/mongo-driver/mongo"
 )
 
 var activeMiningSessions = make(map[string]bool)
@@ -51,8 +46,6 @@ func main() {
 		}
 		defer ws.Close()
 
-		userID := "defekt7x"
-
 		// Handle the WebSocket connection
 		for {
 			_, message, err := ws.ReadMessage()
@@ -71,41 +64,31 @@ func main() {
 
 			switch req.Action {
 			case "startMining":
-
-				if activeMiningSessions[userID] {
-					log.Println("User is already mining")
-					continue
-				}
-
 				rock, err := mining.GetRockById(c, client, req.RockId)
 				if err != nil {
 					// Send error message back via WebSocket
 					continue
 				}
 
-				pickaxe, _ := items.GetItemById(c, client, "bronzePickaxe")
+				player, _ := players.GetPlayerByUsername(c, client, "DevEx7")
 
-				playerInventory := &model.Inventory{
-					Items: make(map[string]*model.InventoryItem),
+				miningSession := &mining.MiningSession{
+					Rock:       rock,
+					Player:     player,
+					SendMsg:    func(msg []byte) { ws.WriteMessage(websocket.TextMessage, msg) },
+					StopSignal: make(chan bool),
 				}
 
-				playerSkillXP := map[string]int{
-					"Mining": 0,
-				}
+				miningSession.Start() // Start the mining session
 
-				playerContext := model.PlayerContext{
-					Inventory: playerInventory,
-					SkillXP:   playerSkillXP,
-				}
-
-				rock.Mine(pickaxe, &playerContext, func(msg []byte) {
-					if err := ws.WriteMessage(websocket.TextMessage, msg); err != nil {
-						log.Println("Write error:", err)
-					}
-				})
-
-				activeMiningSessions[userID] = true
-				defer func() { delete(activeMiningSessions, userID) }()
+				// rock.Mine(pickaxe, &playerContext, func(msg []byte) {
+				// 	if err := ws.WriteMessage(websocket.TextMessage, msg); err != nil {
+				// 		log.Println("Write error:", err)
+				// 	}
+				// })
+				//
+				// activeMiningSessions[userID] = true
+				// defer func() { delete(activeMiningSessions, userID) }()
 
 				// response := MiningResponse{
 				// 	Status:  "success",
@@ -131,73 +114,5 @@ func main() {
 		}
 	})
 
-	// router.GET("/items/:id", func(c *gin.Context) {
-	// 	itemName := c.Param("id")
-	// 	item, err := items.GetItemById(c, client, itemName)
-	//
-	// 	if err != nil {
-	// 		// Check if the error is because the item was not found
-	// 		if err == mongo.ErrNoDocuments {
-	// 			c.JSON(http.StatusNotFound, gin.H{"error": "Item does not exist"})
-	// 		} else {
-	// 			// For other errors, return a 500 status code
-	// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-	// 		}
-	//
-	// 		return
-	// 	}
-	//
-	// 	c.JSON(http.StatusOK, item)
-	// })
-	//
-	// router.POST("swing", func(c *gin.Context) {
-	// 	rock, rockErr := mining.GetRockById(c, client, "copperRock")
-	//
-	// 	playerInventory := &model.Inventory{
-	// 		Items: make(map[string]*model.InventoryItem),
-	// 	}
-	//
-	// 	playerSkillXP := map[string]int{
-	// 		"Mining": 0,
-	// 	}
-	//
-	// 	playerContext := model.PlayerContext{
-	// 		Inventory: playerInventory,
-	// 		SkillXP:   playerSkillXP,
-	// 	}
-	//
-	// 	if rockErr != nil {
-	// 		// Check if the error is because the item was not found
-	// 		if err == mongo.ErrNoDocuments {
-	// 			c.JSON(http.StatusNotFound, gin.H{"error": "Item does not exist"})
-	// 		} else {
-	// 			// For other errors, return a 500 status code
-	// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-	// 		}
-	//
-	// 		return
-	// 	}
-	//
-	// 	pickaxe, pickaxeErr := items.GetItemById(c, client, "bronzePickaxe")
-	//
-	// 	if pickaxeErr != nil {
-	// 		// Handle or log error when failing to get pickaxe
-	// 		log.Printf("Error fetching pickaxe: %v", pickaxeErr)
-	// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch pickaxe"})
-	// 		return
-	// 	}
-	//
-	// 	mineErr := rock.Mine(pickaxe, &playerContext)
-	// 	if mineErr != nil {
-	// 		// Log the error and/or return an appropriate response
-	// 		log.Printf("Error mining rock: %v", mineErr)
-	// 		c.JSON(http.StatusInternalServerError, gin.H{"error": mineErr.Error()})
-	// 		return
-	// 	}
-	//
-	// 	c.JSON(http.StatusOK, rock)
-	// })
-
 	r.Run()
 }
-
