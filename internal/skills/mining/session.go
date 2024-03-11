@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+const SWING_TIME = 2400 * time.Millisecond
+
 type MiningSession struct {
 	Rock       *Rock
 	Player     *model.Player
