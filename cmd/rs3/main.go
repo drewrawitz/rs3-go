@@ -11,8 +11,6 @@ import (
 	"rs3/internal/skills/mining"
 )
 
-var activeMiningSessions = make(map[string]bool)
-
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
@@ -25,6 +23,20 @@ var upgrader = websocket.Upgrader{
 type MiningRequest struct {
 	Action string `json:"action"`
 	RockId string `json:"rockId"`
+}
+
+var activeMiningSessions = make(map[string]*mining.MiningSession)
+
+func stopAndCleanupSession(playerID string) {
+	if session, exists := activeMiningSessions[playerID]; exists {
+		// Send a signal to stop the specific player's mining session
+		session.StopSignal <- true
+
+		// Remove the session from the active sessions map
+		delete(activeMiningSessions, playerID)
+	} else {
+		log.Printf("No active mining session found for player ID %s to stop", playerID)
+	}
 }
 
 func main() {
@@ -46,12 +58,15 @@ func main() {
 		}
 		defer ws.Close()
 
+		player, _ := players.GetPlayerByUsername(c, client, "DevEx7")
+
 		// Handle the WebSocket connection
 		for {
 			_, message, err := ws.ReadMessage()
 
 			if err != nil {
-				log.Println("Read error:", err)
+				log.Println("WebSocket disconnected:", err)
+				stopAndCleanupSession(player.ID)
 				break
 			}
 
@@ -70,16 +85,20 @@ func main() {
 					continue
 				}
 
-				player, _ := players.GetPlayerByUsername(c, client, "DevEx7")
-
 				miningSession := &mining.MiningSession{
 					Rock:       rock,
+					Client:     client,
+					Context:    c,
 					Player:     player,
 					SendMsg:    func(msg []byte) { ws.WriteMessage(websocket.TextMessage, msg) },
 					StopSignal: make(chan bool),
 				}
 
-				miningSession.Start() // Start the mining session
+				activeMiningSessions[player.ID] = miningSession
+				miningSession.Start()
+
+			case "stopMining":
+				stopAndCleanupSession(player.ID)
 
 			default:
 				log.Println("Unrecognizable action", req.Action)

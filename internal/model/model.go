@@ -28,7 +28,8 @@ type LootItem struct {
 type DropTable []LootItem
 
 type Player struct {
-	ID        string          `bson:"_id" json:"id"`
-	Username  string          `bson:"username" json:"username"`
-	Inventory []InventoryItem `bson:"inventory" json:"inventory"`
+	ID        string             `bson:"_id" json:"id"`
+	Username  string             `bson:"username" json:"username"`
+	Inventory []InventoryItem    `bson:"inventory" json:"inventory"`
+	Skills    map[string]float64 `bson:"skills" json:"skills"`
 }
