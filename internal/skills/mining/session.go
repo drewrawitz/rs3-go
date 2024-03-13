@@ -20,7 +20,7 @@ type MiningSession struct {
 }
 
 func (ms *MiningSession) Start() {
-	level := int32(30)
+	level := int32(1)
 	pickaxe := players.FindHighestLevelPickaxe(ms.Player)
 	initialRockHealth := ms.Rock.Durability
 
@@ -30,13 +30,13 @@ func (ms *MiningSession) Start() {
 
 		for range ticker.C {
 			if pickaxe == nil {
-				ms.sendProgressMessage("error", "You don't have a pickaxe equipped", 0, 0)
+				ms.sendProgressMessage("error", "You don't have a pickaxe equipped", 0, 0, 0)
 				return
 			}
 
 			pickaxeProps, isValidPickaxe := pickaxe.Item.Properties.(items.PickaxeProperties)
 			if !isValidPickaxe {
-				ms.sendProgressMessage("error", "Item used to mine the rock is not a pickaxe", 0, 0)
+				ms.sendProgressMessage("error", "Item used to mine the rock is not a pickaxe", 0, 0, 0)
 				return
 			}
 
@@ -49,13 +49,15 @@ func (ms *MiningSession) Start() {
 				damage = ms.Rock.Durability
 			}
 
+			// Calculate the experience gained
+			xp := ms.Rock.calculateExperience(damage)
+
 			ms.Rock.Durability -= damage
 			progress := (float32(initialRockHealth-ms.Rock.Durability) / float32(initialRockHealth)) * 100
 
-			ms.sendProgressMessage("swinging", fmt.Sprintf("You mine the rock and deal %v damage.", damage), progress, damage)
+			ms.sendProgressMessage("swinging", fmt.Sprintf("You mine the rock and deal %v damage.", damage), progress, damage, xp)
 
 			if ms.Rock.Durability <= 0 {
-				ms.sendProgressMessage("depleted", "The rock has been depleted.", 0, 0)
 				ms.Rock.Durability = initialRockHealth
 				continue
 			}
@@ -64,13 +66,14 @@ func (ms *MiningSession) Start() {
 }
 
 // Helper method to encapsulate message sending
-func (ms *MiningSession) sendProgressMessage(status, message string, progress float32, damage int32) {
+func (ms *MiningSession) sendProgressMessage(status, message string, progress float32, damage int32, xp float64) {
 	progressMessage := MiningResponse{
 		Status:   status,
 		Message:  message,
 		RockId:   ms.Rock.ID,
 		Progress: progress,
 		Damage:   int32(damage),
+		Xp:       xp,
 	}
 	progressJSON, err := json.Marshal(progressMessage)
 	if err != nil {
