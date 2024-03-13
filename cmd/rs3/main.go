@@ -79,6 +79,13 @@ func main() {
 
 			switch req.Action {
 			case "startMining":
+				// Check if there's already an active session for this player
+				if _, exists := activeMiningSessions[player.ID]; exists {
+					log.Println("Mining session is already active, cannot start a new one.")
+					// Skip starting a new session
+					continue
+				}
+
 				rock, err := mining.GetRockById(c, client, req.RockId)
 				if err != nil {
 					// Send error message back via WebSocket
